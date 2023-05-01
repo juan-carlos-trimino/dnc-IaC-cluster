@@ -1,0 +1,119 @@
+###################################################################################################
+# Both Pod Security Policy (PSP) and Security Context Constraints (SCC) are cluster-level (non-   #
+# namespaced) resources and allows administrator to control the security aspects of pods in       #
+# Kubernetes and OpenShift clusters, respectively.                                                #
+###################################################################################################
+# WARNING: Once privileges are given to a Security Context Constraint (SCC) and the SCC is granted
+#          to a project Service Account (for example, via a role binding), any deployer in the
+#          project can take advantage of those privileges.
+# Notes:
+# (1) By default, in OpenShift, all pods and containers will use the Restricted SCC.
+# (2) Similar to the way that RBAC resources control user access, administrators can use SCCs to
+#     control permissions for pods. These permissions include actions that a pod can perform and
+#     what resources it can access. Administrators can use SCCs to define a set of conditions that
+#     a pod must run with to be accepted into the system.
+#
+# To get a current list of SCCs:
+# $ oc get scc
+#
+# To create an SCC by passing in a file:
+# $ oc apply -f <scc-file>.yaml
+#
+# To verify that the SCC was created:
+# $ oc get scc <scc_name>
+#
+# To examine a specific SCC; e.g., the restricted SCC:
+# $ oc describe scc restricted
+#
+# To delete an SCC:
+# $ oc delete scc <scc_name>
+#
+# To link a custom SCC to a custom service account:
+# $ oc adm policy add-scc-to-user <scc-name> <service-account-name>
+kind: SecurityContextConstraints
+apiVersion: security.openshift.io/v1
+metadata:
+  name: dnc-rabbitmq-scc
+priority: 10
+# Determine if any container in a pod can enable privileged mode. By default a container is not
+# allowed to access any devices on the host, but a "privileged" container is given access to all
+# devices on the host. This allows the container nearly all the same access as processes running on
+# the host. This is useful for containers that want to use Linux capabilities like manipulating the
+# network stack and accessing devices.
+allowPrivilegedContainer: false
+# Gate whether or not a user is allowed to set the security context of a container to
+# allowPrivilegeEscalation=true. This defaults to allowed so as to not break setuid binaries.
+# Setting it to false ensures that no child process of a container can gain more privileges than
+# its parent.
+allowPrivilegeEscalation: true
+#
+allowHostDirVolumePlugin: false
+# Control whether the pod may use the node network namespace. Doing so gives the pod access to the
+# loopback device, services listening on localhost, and could be used to snoop on network activity
+# of other pods on the same node.
+allowHostNetwork: false
+# Provide a list of ranges of allowable ports in the host network namespace. Defined as a list of
+# HostPortRange, with min(inclusive) and max(inclusive). Defaults to no allowed host ports.
+allowHostPorts: false
+# Control whether the pod containers can share the host process ID namespace. Note that when paired
+# with ptrace this can be used to escalate privileges outside of the container (ptrace is forbidden
+# by default).
+allowHostPID: false
+# Control whether the pod containers can share the host IPC namespace.
+allowHostIPC: false
+# To prevent processes from writing to the container's filesystem (processes can only write to
+# volumes), set the container's securityContext.readOnlyRootFilesystem property to true. When you
+# make the container's filesystem read-only, you will probably want to mount a volume in every
+# directory the app writes.
+readOnlyRootFilesystem: false
+# https://man7.org/linux/man-pages/man7/capabilities.7.html
+# https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
+# Provide a list of capabilities that are allowed to be added to a container. The default set of
+# capabilities are implicitly allowed. The empty set means that no additional capabilities may be
+# added beyond the default set. * can be used to allow all capabilities.
+allowedCapabilities: [
+]
+# The capabilities which are added to containers by default, in addition to the runtime defaults.
+defaultAddCapabilities: [
+]
+# The capabilities which must be dropped from containers. These capabilities are removed from the
+# default set, and must not be added. Capabilities listed in requiredDropCapabilities must not be
+# included in allowedCapabilities or defaultAddCapabilities.
+requiredDropCapabilities: [
+  ALL
+]
+# Control which user ID the containers are run with.
+runAsUser:
+  type: MustRunAs
+  uid: 1060
+#
+fsGroup:
+  type: MustRunAs
+  gid: 1060
+#
+supplementalGroups:
+  type: RunAsAny
+#
+seLinuxContext:
+  type: RunAsAny
+# The users and groups fields on the SCC control which users can access the SCC. All authenticated
+# users are granted access to the Restricted SCC.
+# system:serviceaccount:<serviceaccount_namespace>:<serviceaccount_name>
+users: [
+  system:serviceaccount:dot-net-core:dnc-rabbitmq-service-account
+]
+groups: [
+  system:authenticated
+]
+# Provide a list of allowed volume types.
+# Notes:
+# (1) For backwards compatibility, the usage of allowHostDirVolumePlugin overrides settings in the
+#     volumes field.
+volumes: [
+  configMap,
+  downwardAPI,
+  emptyDir,
+  persistentVolumeClaim,
+  projected,
+  secret
+]

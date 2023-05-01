@@ -1,0 +1,36 @@
+# Ignore everything.
+**
+
+# But include these files...
+!.gitignore
+!LICENSE
+!README.md
+
+# ... and these files under the 'tf' directory...
+!tf/
+tf/*
+!tf/bootstrap.tf
+!tf/data.tf
+!tf/namespace.tf
+!tf/providers.tf
+!tf/variables_no_push.tf.template
+!tf/variables.tf
+# ... and this directory...
+!tf/cluster_config/
+tf/cluster_config/*
+!tf/cluster_config/.gitkeep
+# ... and these directories...
+!tf/modules/
+tf/modules/*
+#
+!tf/modules/deployment/
+tf/modules/deployment/*
+!tf/modules/deployment/main.tf
+#
+!tf/modules/rabbitmq-statefulset/
+tf/modules/rabbitmq-statefulset/*
+!tf/modules/rabbitmq-statefulset/main.tf
+!tf/modules/rabbitmq-statefulset/util/
+tf/modules/rabbitmq-statefulset/util/*
+!tf/modules/rabbitmq-statefulset/util/dnc-rabbitmq-scc.yaml
+!tf/modules/rabbitmq-statefulset/util/rabbitmq.conf
