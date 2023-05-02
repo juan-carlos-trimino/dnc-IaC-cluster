@@ -188,6 +188,7 @@ module "dnc-blob-storage" {
   #   success_threshold = 1
   # }]
   service_name = local.svc_blob_storage
+  service_type = "LoadBalancer"
 }
 
 /***
