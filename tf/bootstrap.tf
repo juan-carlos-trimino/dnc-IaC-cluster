@@ -1,21 +1,22 @@
 # $ terraform init
 # $ terraform apply -var="app_version=1.0.0" -auto-approve
 # $ terraform destroy -var="app_version=1.0.0" -auto-approve
-# $ kubectl get all -n bloyal
+# $ meta git clone https://github.com/juan-carlos-trimino/dnc-meta-repo.git
+# $ kubectl get all -n dot-net-core
 locals {
   namespace = kubernetes_namespace.ns.metadata[0].name
   cr_login_server = "docker.io"
   ####################
   # Name of Services #
   ####################
-  svc_blob_storage = "dnc-blob-storage"
+  svc_storage = "dnc-storage"
   svc_rmq_subscriber = "dnc-rmq-subscriber"
   svc_rmq_publisher = "dnc-rmq-publisher"
   svc_rabbitmq = "dnc-rabbitmq"
   ############
   # Services #
   ############
-  svc_dns_blob_storage = "${local.svc_blob_storage}.${local.namespace}.svc.cluster.local"
+  svc_dns_storage = "${local.svc_storage}.${local.namespace}.svc.cluster.local"
   # By default, the guest user is prohibited from connecting from remote hosts; it can only connect
   # over a loopback interface (i.e. localhost). This applies to connections regardless of the
   # protocol. Any other users will not (by default) be restricted in this way.
@@ -147,10 +148,10 @@ module "dnc-rmq-subscriber" {
 }
 # ***/
 
-module "dnc-blob-storage" {
+module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
-  dir_name = "../../dnc-blob-storage"
+  dir_name = "../../dnc-storage"
   app_name = var.app_name
   app_version = var.app_version
   namespace = local.namespace
@@ -161,7 +162,7 @@ module "dnc-blob-storage" {
   cr_username = var.cr_username
   cr_password = var.cr_password
   env = {
-    SVC_NAME: local.svc_dns_blob_storage
+    SVC_NAME: local.svc_dns_storage
     BUCKET_NAME: var.bucket_name
     # Without HMAC.
     AUTHENTICATION_TYPE: "iam"
@@ -187,7 +188,7 @@ module "dnc-blob-storage" {
   #   failure_threshold = 4
   #   success_threshold = 1
   # }]
-  service_name = local.svc_blob_storage
+  service_name = local.svc_storage
   service_type = "LoadBalancer"
 }
 
