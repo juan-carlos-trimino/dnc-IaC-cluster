@@ -68,6 +68,11 @@ variable storage_api_key {
   sensitive = true
 }
 
+variable storage_region {
+  default = "<required>"
+  sensitive = true
+}
+
 variable private_endpoint {
   default = "<required>"
   sensitive = true

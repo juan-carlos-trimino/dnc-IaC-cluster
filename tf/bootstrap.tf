@@ -169,6 +169,7 @@ module "dnc-storage" {
     API_KEY: var.storage_api_key
     SERVICE_INSTANCE_ID: var.resource_instance_id
     ENDPOINT: var.public_endpoint
+    REGION: var.storage_region
     # With HMAC.
     # AUTHENTICATION_TYPE: "hmac"
     # REGION: var.region1
