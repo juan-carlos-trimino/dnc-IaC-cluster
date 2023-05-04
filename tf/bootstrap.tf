@@ -29,7 +29,7 @@ locals {
 ###################################################################################################
 # rabbitmq                                                                                        #
 ###################################################################################################
-# /*** rabbitmq
+/*** rabbitmq
 module "dnc-rabbitmq" {
   source = "./modules/rabbitmq-statefulset"
   app_name = var.app_name
@@ -71,12 +71,12 @@ module "dnc-rabbitmq" {
   mgmt_service_target_port = 15672
   service_name = local.svc_rabbitmq
 }
-# ***/  # rabbitmq - statefulset
+***/  # rabbitmq - statefulset
 
 ###################################################################################################
 # Application                                                                                     #
 ###################################################################################################
-# /***
+/***
 module "dnc-rmq-publisher" {
   depends_on = [
     module.dnc-rabbitmq
@@ -146,7 +146,7 @@ module "dnc-rmq-subscriber" {
   # }]
   service_name = local.svc_rmq_subscriber
 }
-# ***/
+***/
 
 module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
