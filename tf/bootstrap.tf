@@ -9,14 +9,18 @@ locals {
   ####################
   # Name of Services #
   ####################
+  svc_redis = "dnc-redis"
   svc_storage = "dnc-storage"
+  svc_storage_cs = "dnc-storage-cs"
   svc_rmq_subscriber = "dnc-rmq-subscriber"
   svc_rmq_publisher = "dnc-rmq-publisher"
   svc_rabbitmq = "dnc-rabbitmq"
   ############
   # Services #
   ############
+  svc_dns_redis = "${local.svc_redis}.${local.namespace}.svc.cluster.local"
   svc_dns_storage = "${local.svc_storage}.${local.namespace}.svc.cluster.local"
+  svc_dns_storage_cs = "${local.svc_storage_cs}.${local.namespace}.svc.cluster.local"
   # By default, the guest user is prohibited from connecting from remote hosts; it can only connect
   # over a loopback interface (i.e. localhost). This applies to connections regardless of the
   # protocol. Any other users will not (by default) be restricted in this way.
@@ -26,6 +30,47 @@ locals {
   svc_dns_rabbitmq = "amqp://${var.rabbitmq_default_user}:${var.rabbitmq_default_pass}@${local.svc_rabbitmq}-headless.${local.namespace}.svc.cluster.local:5672"
 }
 
+###################################################################################################
+# redis                                                                                           #
+###################################################################################################
+# /*** redis
+module "dnc-redis" {
+  source = "./modules/redis-statefulset"
+  app_name = var.app_name
+  app_version = var.app_version
+  image_tag = "redis:7.0.11-alpine"
+  image_pull_policy = "IfNotPresent"
+  namespace = local.namespace
+  # path_rabbitmq_files = "./modules/rabbitmq-statefulset/utilxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  # rabbitmq_erlang_cookie = var.rabbitmq_erlang_cookie
+  # rabbitmq_default_pass = var.rabbitmq_default_pass
+  # rabbitmq_default_user = var.rabbitmq_default_user
+  publish_not_ready_addresses = true
+  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
+  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
+  # and so on.
+  replicas = 1
+  # Limits and requests for CPU resources are measured in millicores. If the container needs one
+  # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
+  # value of '250m.'
+  qos_limits_cpu = "500m"
+  qos_limits_memory = "800Mi"
+  pvc_access_modes = ["ReadWriteOnce"]
+  pvc_storage_size = "10Gi"
+  # pvc_storage_class_name = "ibmc-vpc-block-general-purpose"
+  pvc_storage_class_name = "ibmc-block-silver"
+  env = {
+    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
+    # tools must be configured to use so called long node names.
+    # RABBITMQ_USE_LONGNAME = true
+    # Override the main RabbitMQ config file location.
+    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
+  }
+  redis_service_port = 6379
+  redis_service_target_port = 6379
+  service_name = local.svc_redis
+}
+# ***/  # redis - stateful
 ###################################################################################################
 # rabbitmq                                                                                        #
 ###################################################################################################
@@ -147,7 +192,7 @@ module "dnc-rmq-subscriber" {
   service_name = local.svc_rmq_subscriber
 }
 ***/
-
+/***
 module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -192,6 +237,53 @@ module "dnc-storage" {
   service_name = local.svc_storage
   service_type = "LoadBalancer"
 }
+***/
+module "dnc-storage-cs" {
+  # Specify the location of the module, which contains the file main.tf.
+  source = "./modules/deployment"
+  dir_name = "../../dnc-storage-cs"
+  app_name = var.app_name
+  app_version = var.app_version
+  namespace = local.namespace
+  replicas = 1
+  qos_limits_cpu = "400m"
+  qos_limits_memory = "400Mi"
+  cr_login_server = local.cr_login_server
+  cr_username = var.cr_username
+  cr_password = var.cr_password
+  env = {
+    # SVC_DNS: local.svc_dns_storage_cs
+    BUCKET_NAME: var.bucket_name
+    # Without HMAC.
+    # AUTHENTICATION_TYPE: "iam"
+    # API_KEY: var.storage_api_key
+    # SERVICE_INSTANCE_ID: var.resource_instance_id
+    # ENDPOINT: var.public_endpoint
+    # REGION: var.storage_region
+    # With HMAC.
+    AUTHENTICATION_TYPE: "hmac"
+    REGION: var.region
+    ACCESS_KEY_ID: var.access_key_id
+    SECRET_ACCESS_KEY: var.secret_access_key
+    ENDPOINT: var.public_endpoint
+  }
+  # readiness_probe = [{
+  #   http_get = [{
+  #     path = "/readiness"
+  #     port = 0
+  #     scheme = "HTTP"
+  #   }]
+  #   initial_delay_seconds = 30
+  #   period_seconds = 20
+  #   timeout_seconds = 2
+  #   failure_threshold = 4
+  #   success_threshold = 1
+  # }]
+  service_name = local.svc_storage_cs
+  service_type = "LoadBalancer"
+}
+
+
 
 /***
 module "rmq-consumer-go" {
