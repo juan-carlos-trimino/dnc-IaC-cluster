@@ -40,5 +40,5 @@ tf/modules/redis-statefulset/*
 !tf/modules/redis-statefulset/main.tf
 !tf/modules/redis-statefulset/util/
 tf/modules/redis-statefulset/util/*
-!tf/modules/redis-statefulset/util/master.conf
+!tf/modules/redis-statefulset/util/redis.conf
 !tf/modules/redis-statefulset/util/redis-conf-setup.sh
