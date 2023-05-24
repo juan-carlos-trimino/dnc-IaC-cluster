@@ -72,14 +72,10 @@ module "dnc-redis" {
 }
 # ***/  # redis - stateful
 
-
-
-
-
 ###################################################################################################
 # rabbitmq                                                                                        #
 ###################################################################################################
-/*** rabbitmq
+# /*** rabbitmq
 module "dnc-rabbitmq" {
   source = "./modules/rabbitmq-statefulset"
   app_name = var.app_name
@@ -98,7 +94,7 @@ module "dnc-rabbitmq" {
   # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
-  replicas = 1
+  replicas = 3
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
   # value of '250m.'
@@ -121,7 +117,7 @@ module "dnc-rabbitmq" {
   mgmt_service_target_port = 15672
   service_name = local.svc_rabbitmq
 }
-***/  # rabbitmq - statefulset
+# ***/  # rabbitmq - statefulset
 
 ###################################################################################################
 # Application                                                                                     #
@@ -165,7 +161,7 @@ module "dnc-redis-app" {
   # service_type = "LoadBalancer"
 }
 
-/***
+# /***
 module "dnc-rmq-publisher" {
   depends_on = [
     module.dnc-rabbitmq
@@ -235,7 +231,7 @@ module "dnc-rmq-subscriber" {
   # }]
   service_name = local.svc_rmq_subscriber
 }
-***/
+# ***/
 
 /***
 module "dnc-storage" {
@@ -256,10 +252,10 @@ module "dnc-storage" {
     BUCKET_NAME: var.bucket_name
     # Without HMAC.
     AUTHENTICATION_TYPE: "iam"
-    API_KEY: var.storage_api_key
-    SERVICE_INSTANCE_ID: var.resource_instance_id
-    ENDPOINT: var.public_endpoint
-    REGION: var.storage_region
+    API_KEY: var.iam_storage_api_key
+    SERVICE_INSTANCE_ID: var.iam_resource_instance_id
+    ENDPOINT: var.iam_public_endpoint
+    REGION: var.iam_storage_region
     # With HMAC.
     # AUTHENTICATION_TYPE: "hmac"
     # REGION: var.region1
@@ -308,10 +304,10 @@ module "dnc-storage-cs" {
     # REGION: var.storage_region
     # With HMAC.
     AUTHENTICATION_TYPE: "hmac"
-    REGION: var.region
-    ACCESS_KEY_ID: var.access_key_id
-    SECRET_ACCESS_KEY: var.secret_access_key
-    ENDPOINT: var.public_endpoint
+    REGION: var.hmac_storage_region
+    ACCESS_KEY_ID: var.hmac_access_key_id
+    SECRET_ACCESS_KEY: var.hmac_secret_access_key
+    ENDPOINT: var.hmac_public_endpoint
   }
   # readiness_probe = [{
   #   http_get = [{

@@ -63,33 +63,56 @@ variable cr_password {
 #  Private                                                                                         #
 #  public                                                                                          #
 ####################################################################################################
-variable storage_api_key {
-  default = "<required>"
-  sensitive = true
-}
-
-variable storage_region {
-  default = "<required>"
-  sensitive = true
-}
-
-variable private_endpoint {
-  default = "<required>"
-  sensitive = true
-}
-
-variable public_endpoint {
-  default = "<required>"
-  sensitive = true
-}
-
 variable bucket_name {
   default = "<required>"
   sensitive = true
 }
 
-variable resource_instance_id {
+### With IAM
+variable iam_storage_api_key {
   default = "<required>"
+  sensitive = true
+}
+
+variable iam_storage_region {
+  default = "<required>"
+  sensitive = true
+}
+
+variable iam_private_endpoint {
+  default = "<required>"
+  sensitive = true
+}
+
+variable iam_public_endpoint {
+  default = "<required>"
+  sensitive = true
+}
+
+variable iam_resource_instance_id {
+  default = "<required>"
+  sensitive = true
+}
+
+### With HMAC
+variable hmac_access_key_id {
+  default = "b4e1de4e02ca4248a3a305507a648e09"
+  sensitive = true
+}
+
+variable hmac_secret_access_key {
+  default = "<required>"
+  sensitive = true
+}
+
+variable hmac_public_endpoint {
+  default = "<required>"
+  sensitive = true
+}
+
+variable hmac_storage_region {
+  default = "<required>"
+  sensitive = true
 }
 
 ##########################
