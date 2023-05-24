@@ -3,6 +3,7 @@
 # https://redis.io/
 # https://redis.io/docs/management/persistence/
 # https://www.baeldung.com/redis-sentinel-vs-clustering
+# https://www.youtube.com/watch?v=JmCn7k0PlV4
 /***
 -------------------------------------------------------
 A Terraform reusable module for deploying microservices
@@ -126,7 +127,8 @@ resource "kubernetes_config_map" "config" {
       maxmemory-policy allkeys-lru
       maxclients 20000
       timeout 300
-      appendonly no
+      appendonly yes
+      appendfilename appendonly.aof
       protected-mode no
       dbfilename dump.rdb
       dir /data

@@ -75,49 +75,6 @@ module "dnc-redis" {
 
 
 
-module "dnc-redis-app" {
-  depends_on = [
-    module.dnc-redis
-  ]
-  source = "./modules/deployment"
-  dir_name = "../../dnc-redis"
-  app_name = var.app_name
-  app_version = var.app_version
-  namespace = local.namespace
-  # image_tag = "redis:7.0.11-alpine"
-  # image_tag = "redis:7.0.11"
-  # image_pull_policy = "IfNotPresent"
-  # path_redis_files = "./modules/redis-statefulset/util"
-  # publish_not_ready_addresses = true
-  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
-  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
-  # and so on.
-  replicas = 1
-  # Limits and requests for CPU resources are measured in millicores. If the container needs one
-  # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
-  # value of '250m.'
-  qos_limits_cpu = "500m"
-  qos_limits_memory = "800Mi"
-  cr_login_server = local.cr_login_server
-  cr_username = var.cr_username
-  cr_password = var.cr_password
-  # pvc_access_modes = ["ReadWriteOnce"]
-  # pvc_storage_size = "5Gi"
-  # pvc_storage_class_name = "ibmc-block-silver"
-  env = {
-    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
-    # tools must be configured to use so called long node names.
-    # RABBITMQ_USE_LONGNAME = true
-    # Override the main RabbitMQ config file location.
-    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
-  }
-  # redis_service_port = 637
-  # redis_service_target_port = 6379
-  service_name = local.svc_redis_app
-  # service_type = "LoadBalancer"
-}
-
-
 
 ###################################################################################################
 # rabbitmq                                                                                        #
@@ -169,6 +126,45 @@ module "dnc-rabbitmq" {
 ###################################################################################################
 # Application                                                                                     #
 ###################################################################################################
+module "dnc-redis-app" {
+  depends_on = [
+    module.dnc-redis
+  ]
+  source = "./modules/deployment"
+  dir_name = "../../dnc-redis"
+  app_name = var.app_name
+  app_version = var.app_version
+  namespace = local.namespace
+  # image_tag = "redis:7.0.11-alpine"
+  # image_tag = "redis:7.0.11"
+  # image_pull_policy = "IfNotPresent"
+  # path_redis_files = "./modules/redis-statefulset/util"
+  # publish_not_ready_addresses = true
+  replicas = 1
+  # Limits and requests for CPU resources are measured in millicores. If the container needs one
+  # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
+  # value of '250m.'
+  qos_limits_cpu = "500m"
+  qos_limits_memory = "800Mi"
+  cr_login_server = local.cr_login_server
+  cr_username = var.cr_username
+  cr_password = var.cr_password
+  # pvc_access_modes = ["ReadWriteOnce"]
+  # pvc_storage_size = "5Gi"
+  # pvc_storage_class_name = "ibmc-block-silver"
+  env = {
+    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
+    # tools must be configured to use so called long node names.
+    # RABBITMQ_USE_LONGNAME = true
+    # Override the main RabbitMQ config file location.
+    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
+  }
+  # redis_service_port = 637
+  # redis_service_target_port = 6379
+  service_name = local.svc_redis_app
+  # service_type = "LoadBalancer"
+}
+
 /***
 module "dnc-rmq-publisher" {
   depends_on = [
@@ -240,6 +236,7 @@ module "dnc-rmq-subscriber" {
   service_name = local.svc_rmq_subscriber
 }
 ***/
+
 /***
 module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
@@ -286,6 +283,7 @@ module "dnc-storage" {
   service_type = "LoadBalancer"
 }
 ***/
+
 module "dnc-storage-cs" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -330,8 +328,6 @@ module "dnc-storage-cs" {
   service_name = local.svc_storage_cs
   service_type = "LoadBalancer"
 }
-
-
 
 /***
 module "rmq-consumer-go" {
