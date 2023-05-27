@@ -10,6 +10,7 @@ locals {
   # Name of Services #
   ####################
   svc_redis = "dnc-redis"
+  svc_sentinel = "dnc-sentinel"
   svc_redis_app = "dnc-redis-app"
   svc_storage = "dnc-storage"
   svc_storage_cs = "dnc-storage-cs"
@@ -35,8 +36,9 @@ locals {
 # redis                                                                                           #
 ###################################################################################################
 # /*** redis
-module "dnc-redis" {
-  source = "./modules/redis-statefulset"
+/***
+module "dnc-sentinel" {
+  source = "./modules/redis/sentinel-statefulset"
   app_name = var.app_name
   app_version = var.app_version
   # image_tag = "redis:7.0.11-alpine"
@@ -44,7 +46,7 @@ module "dnc-redis" {
   image_tag = "redis/redis-stack:edge"
   image_pull_policy = "IfNotPresent"
   namespace = local.namespace
-  path_redis_files = "./modules/redis-statefulset/util"
+  path_redis_files = "./modules/redis/util"
   publish_not_ready_addresses = true
   # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
@@ -53,7 +55,46 @@ module "dnc-redis" {
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
   # value of '250m.'
+  qos_requests_cpu = "100m"
+  qos_limits_cpu = "200m"
+  qos_requests_memory = "300Mi"
+  qos_limits_memory = "400Mi"
+  pvc_access_modes = ["ReadWriteOnce"]
+  pvc_storage_size = "1Gi"
+  pvc_storage_class_name = "ibmc-block-silver"
+  env = {
+    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
+    # tools must be configured to use so called long node names.
+    # RABBITMQ_USE_LONGNAME = true
+    # Override the main RabbitMQ config file location.
+    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
+  }
+  redis_service_port = 5000
+  redis_service_target_port = 5000
+  service_name = local.svc_sentinel
+}
+***/
+module "dnc-redis" {
+  source = "./modules/redis/redis-statefulset"
+  app_name = var.app_name
+  app_version = var.app_version
+  # image_tag = "redis:7.0.11-alpine"
+  # image_tag = "redis:7.0.11"
+  image_tag = "redis/redis-stack:edge"
+  image_pull_policy = "IfNotPresent"
+  namespace = local.namespace
+  path_redis_files = "./modules/redis/util"
+  publish_not_ready_addresses = true
+  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
+  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
+  # and so on.
+  replicas = 3
+  # Limits and requests for CPU resources are measured in millicores. If the container needs one
+  # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
+  # value of '250m.'
+  qos_requests_cpu = "300m"
   qos_limits_cpu = "500m"
+  qos_requests_memory = "500Mi"
   qos_limits_memory = "800Mi"
   pvc_access_modes = ["ReadWriteOnce"]
   pvc_storage_size = "5Gi"
@@ -75,7 +116,7 @@ module "dnc-redis" {
 ###################################################################################################
 # rabbitmq                                                                                        #
 ###################################################################################################
-# /*** rabbitmq
+/*** rabbitmq
 module "dnc-rabbitmq" {
   source = "./modules/rabbitmq-statefulset"
   app_name = var.app_name
@@ -117,11 +158,12 @@ module "dnc-rabbitmq" {
   mgmt_service_target_port = 15672
   service_name = local.svc_rabbitmq
 }
-# ***/  # rabbitmq - statefulset
+***/  # rabbitmq - statefulset
 
 ###################################################################################################
 # Application                                                                                     #
 ###################################################################################################
+# /*** dnc-redis
 module "dnc-redis-app" {
   depends_on = [
     module.dnc-redis
@@ -155,13 +197,14 @@ module "dnc-redis-app" {
     # Override the main RabbitMQ config file location.
     # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
   }
-  # redis_service_port = 637
-  # redis_service_target_port = 6379
+  service_port = 5000
+  service_target_port = 5000
   service_name = local.svc_redis_app
-  # service_type = "LoadBalancer"
+  service_type = "LoadBalancer"
 }
+# ***/ # dnc-redis
 
-# /***
+/*** dnc-rmq
 module "dnc-rmq-publisher" {
   depends_on = [
     module.dnc-rabbitmq
@@ -231,7 +274,7 @@ module "dnc-rmq-subscriber" {
   # }]
   service_name = local.svc_rmq_subscriber
 }
-# ***/
+***/ # dnc-rmq
 
 /***
 module "dnc-storage" {
