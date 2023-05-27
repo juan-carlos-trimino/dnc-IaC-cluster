@@ -36,44 +36,6 @@ locals {
 # redis                                                                                           #
 ###################################################################################################
 # /*** redis
-/***
-module "dnc-sentinel" {
-  source = "./modules/redis/sentinel-statefulset"
-  app_name = var.app_name
-  app_version = var.app_version
-  # image_tag = "redis:7.0.11-alpine"
-  # image_tag = "redis:7.0.11"
-  image_tag = "redis/redis-stack:edge"
-  image_pull_policy = "IfNotPresent"
-  namespace = local.namespace
-  path_redis_files = "./modules/redis/util"
-  publish_not_ready_addresses = true
-  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
-  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
-  # and so on.
-  replicas = 3
-  # Limits and requests for CPU resources are measured in millicores. If the container needs one
-  # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
-  # value of '250m.'
-  qos_requests_cpu = "100m"
-  qos_limits_cpu = "200m"
-  qos_requests_memory = "300Mi"
-  qos_limits_memory = "400Mi"
-  pvc_access_modes = ["ReadWriteOnce"]
-  pvc_storage_size = "1Gi"
-  pvc_storage_class_name = "ibmc-block-silver"
-  env = {
-    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
-    # tools must be configured to use so called long node names.
-    # RABBITMQ_USE_LONGNAME = true
-    # Override the main RabbitMQ config file location.
-    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
-  }
-  redis_service_port = 5000
-  redis_service_target_port = 5000
-  service_name = local.svc_sentinel
-}
-***/
 module "dnc-redis" {
   source = "./modules/redis/redis-statefulset"
   app_name = var.app_name
@@ -106,10 +68,46 @@ module "dnc-redis" {
     # Override the main RabbitMQ config file location.
     # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
   }
-  redis_service_port = 6379
-  redis_service_target_port = 6379
+  service_port = 6379
+  service_target_port = 6379
   service_name = local.svc_redis
   # service_type = "LoadBalancer"
+}
+
+module "dnc-sentinel" {
+  source = "./modules/redis/sentinel-statefulset"
+  app_name = var.app_name
+  app_version = var.app_version
+  image_tag = "redis:7.0.11-alpine"
+  # image_tag = "redis:7.0.11"
+  image_pull_policy = "IfNotPresent"
+  namespace = local.namespace
+  path_redis_files = "./modules/redis/util"
+  publish_not_ready_addresses = true
+  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
+  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
+  # and so on.
+  replicas = 3
+  # Limits and requests for CPU resources are measured in millicores. If the container needs one
+  # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
+  # value of '250m.'
+  qos_requests_cpu = "100m"
+  qos_limits_cpu = "200m"
+  qos_requests_memory = "300Mi"
+  qos_limits_memory = "400Mi"
+  pvc_access_modes = ["ReadWriteOnce"]
+  pvc_storage_size = "1Gi"
+  pvc_storage_class_name = "ibmc-block-silver"
+  env = {
+    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
+    # tools must be configured to use so called long node names.
+    # RABBITMQ_USE_LONGNAME = true
+    # Override the main RabbitMQ config file location.
+    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
+  }
+  service_port = 5000
+  service_target_port = 5000
+  service_name = local.svc_sentinel
 }
 # ***/  # redis - stateful
 

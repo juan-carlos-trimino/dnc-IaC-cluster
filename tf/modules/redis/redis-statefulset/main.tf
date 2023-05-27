@@ -91,10 +91,10 @@ variable service_name {
 variable service_session_affinity {
   default = "None"
 }
-variable redis_service_port {
+variable service_port {
   type = number
 }
-variable redis_service_target_port {
+variable service_target_port {
   type = number
 }
 # The ServiceType allows to specify what kind of Service to use: ClusterIP (default),
@@ -123,25 +123,6 @@ resource "kubernetes_config_map" "config" {
   data = {
     "redis-conf-setup.sh" = "${file("${var.path_redis_files}/redis-conf-setup.sh")}"
     "redis.conf" = "${file("${var.path_redis_files}/redis.conf")}"
-    # "master.conf" = <<EOF
-    #   maxmemory 400mb
-    #   maxmemory-policy allkeys-lru
-    #   maxclients 20000
-    #   timeout 300
-    #   appendonly yes
-    #   appendfilename appendonly.aof
-    #   protected-mode no
-    #   dbfilename dump.rdb
-    #   dir /data
-    # EOF
-    # "slave.conf" = <<EOF
-    #   slaveof ${var.service_name}-0.${local.svc_name}.${var.namespace}.svc.cluster.local 6379
-    #   maxmemory 400mb
-    #   maxmemory-policy allkeys-lru
-    #   maxclients 20000
-    #   timeout 300
-    #   dir /data
-    # EOF
   }
 }
 
@@ -221,7 +202,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/bash", "-c"
           ]
           args = [
-            "/redis-config/redis-conf-setup.sh"
+            "/redis/redis-conf-setup.sh"
           ]
           volume_mount {
             name = "redis-config"
@@ -230,7 +211,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
           }
           volume_mount {
             name = "config"
-            mount_path = "/redis-config"
+            mount_path = "/redis"
             read_only = true
           }
         }
@@ -250,7 +231,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
           # everyone using the cluster can quickly see what ports each pod exposes.
           port {
             name = "redis"
-            container_port = var.redis_service_target_port # The port the app is listening.
+            container_port = var.service_target_port # The port the app is listening.
             protocol = "TCP"
           }
           resources {
@@ -280,7 +261,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             read_only = false
           }
           volume_mount {
-            name = "redis-cofig"
+            name = "redis-config"
             mount_path = "/redis-config"
             read_only = false
           }
@@ -339,25 +320,6 @@ resource "kubernetes_stateful_set" "stateful_set" {
         }
       }
     }
-    #
-    # volume_claim_template {
-    #   metadata {
-    #     name = "redis-claim"
-    #     namespace = var.namespace
-    #     labels = {
-    #       app = var.app_name
-    #     }
-    #   }
-    #   spec {
-    #     access_modes = var.pvc_access_modes
-    #     storage_class_name = var.pvc_storage_class_name
-    #     resources {
-    #       requests = {
-    #         storage = "200Mi"
-    #       }
-    #     }
-    #   }
-    # }
   }
 }
 
@@ -380,8 +342,8 @@ resource "kubernetes_service" "headless_service" { # For inter-node communicatio
     session_affinity = var.service_session_affinity
     port {
       name = "redis"
-      port = var.redis_service_port # Service port.
-      target_port = var.redis_service_target_port # Pod port.
+      port = var.service_port # Service port.
+      target_port = var.service_target_port # Pod port.
       protocol = "TCP"
     }
     type = var.service_type

@@ -102,7 +102,7 @@ locals {
   svc_name = "${var.service_name}-headless"
   pod_selector_label = "ps-${var.service_name}"
   svc_selector_label = "svc-${local.svc_name}"
-  redis_label = "dnc-sentinel-cluster"
+  sentinel_label = "dnc-sentinel-cluster"
 }
 
 # The ConfigMap passes to the rabbitmq daemon a bootstrap configuration which mainly defines peer
@@ -116,26 +116,7 @@ resource "kubernetes_config_map" "config" {
     }
   }
   data = {
-    "redis-conf-setup.sh" = "${file("${var.path_redis_files}/redis-conf-setup.sh")}"
-    "master.conf" = <<EOF
-      maxmemory 400mb
-      maxmemory-policy allkeys-lru
-      maxclients 20000
-      timeout 300
-      appendonly yes
-      appendfilename appendonly.aof
-      protected-mode no
-      dbfilename dump.rdb
-      dir /data
-    EOF
-    "slave.conf" = <<EOF
-      slaveof ${var.service_name}-0.${local.svc_name}.${var.namespace}.svc.cluster.local 6379
-      maxmemory 400mb
-      maxmemory-policy allkeys-lru
-      maxclients 20000
-      timeout 300
-      dir /data
-    EOF
+    "sentinel-conf-setup.sh" = "${file("${var.path_redis_files}/sentinel-conf-setup.sh")}"
   }
 }
 
@@ -180,7 +161,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
           pod_selector_lbl = local.pod_selector_label
           # It must match the label selector of the Service.
           svc_selector_lbl = local.svc_selector_label
-          redis_lbl = local.redis_label
+          sentinel_lbl = local.sentinel_label
         }
       }
       #
@@ -192,12 +173,12 @@ resource "kubernetes_stateful_set" "stateful_set" {
                 match_expressions {
                   # Description of the pod label that determines when the anti-affinity rule
                   # applies. Specifies a key and value for the label.
-                  key = "redis_lbl"
+                  key = "sentinel_lbl"
                   # The operator represents the relationship between the label on the existing
                   # pod and the set of values in the matchExpression parameters in the
                   # specification for the new pod. Can be In, NotIn, Exists, or DoesNotExist.
                   operator = "In"
-                  values = ["${local.redis_label}"]
+                  values = ["${local.sentinel_label}"]
                 }
               }
               topology_key = "kubernetes.io/hostname"
@@ -206,25 +187,25 @@ resource "kubernetes_stateful_set" "stateful_set" {
         }
         termination_grace_period_seconds = var.termination_grace_period_seconds
         init_container {
-          name = "init-redis"
+          name = "init-sentinel"
           image = var.image_tag
           # image = "busybox:1.34.1"
           image_pull_policy = var.image_pull_policy
           # https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/#statefulset
           command = [
-            "/bin/bash", "-c"
+            "/bin/sh", "-c"
           ]
           args = [
-            "/redis-config/redis-conf-setup.sh"
+            "/sentinel/sentinel-conf-setup.sh"
           ]
           volume_mount {
-            name = "redis-claim"
-            mount_path = "/redis-etc"
+            name = "sentinel-config"
+            mount_path = "/sentinel-config"
             read_only = false
           }
           volume_mount {
             name = "config"
-            mount_path = "/redis-config"
+            mount_path = "/sentinel"
             read_only = true
           }
         }
@@ -232,10 +213,10 @@ resource "kubernetes_stateful_set" "stateful_set" {
           name = var.service_name
           image = var.image_tag
           image_pull_policy = var.image_pull_policy
-          # command = [
-          #   "redis-server",
-          #   "/redis-etc/redis.conf"
-          # ]
+          command = [
+            "redis-sentinel",
+            "/sentinel-config/sentinel.conf"
+          ]
           # Specifying ports in the pod definition is purely informational. Omitting them has no
           # effect on whether clients can connect to the pod through the port or not. If the
           # container is accepting connections through a port bound to the 0.0.0.0 address, other
@@ -244,7 +225,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
           # everyone using the cluster can quickly see what ports each pod exposes.
           port {
             name = "sentinel"
-            container_port = var.redis_service_target_port # The port the app is listening.
+            container_port = var.service_target_port # The port the app is listening.
             protocol = "TCP"
           }
           resources {
@@ -269,13 +250,13 @@ resource "kubernetes_stateful_set" "stateful_set" {
             }
           }
           volume_mount {
-            name = "redis-data"
+            name = "sentinel-data"
             mount_path = "/data"
             read_only = false
           }
           volume_mount {
-            name = "redis-claim"
-            mount_path = "/redis-etc"
+            name = "sentinel-config"
+            mount_path = "/sentinel-config"
             read_only = false
           }
         }
@@ -287,17 +268,14 @@ resource "kubernetes_stateful_set" "stateful_set" {
             # (rw-r--r--).
             default_mode = "0770" # Octal
             items {
-              key = "master.conf"
-              path = "master.conf" #File name.
+              key = "sentinel-conf-setup.sh"
+              path = "sentinel-conf-setup.sh" #File name.
             }
-            items {
-              key = "slave.conf"
-              path = "slave.conf" #File name.
-            }
-            items {
-              key = "redis-conf-setup.sh"
-              path = "redis-conf-setup.sh" #File name.
-            }
+          }
+        }
+        volume {
+          name = "sentinel-config"
+          empty_dir {
           }
         }
       }
@@ -316,7 +294,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
     # of quorum during a rolling restart, this will also lead to data loss.
     volume_claim_template {
       metadata {
-        name = "redis-data"
+        name = "sentinel-data"
         namespace = var.namespace
         labels = {
           app = var.app_name
@@ -328,25 +306,6 @@ resource "kubernetes_stateful_set" "stateful_set" {
         resources {
           requests = {
             storage = var.pvc_storage_size
-          }
-        }
-      }
-    }
-    #
-    volume_claim_template {
-      metadata {
-        name = "redis-claim"
-        namespace = var.namespace
-        labels = {
-          app = var.app_name
-        }
-      }
-      spec {
-        access_modes = var.pvc_access_modes
-        storage_class_name = var.pvc_storage_class_name
-        resources {
-          requests = {
-            storage = "200Mi"
           }
         }
       }

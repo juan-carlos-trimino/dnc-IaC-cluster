@@ -34,12 +34,12 @@ echo Hostname=`hostname`
 # needed.
 if [[ $ordinal -eq 0 ]]; then
   # cp /redis-config/master.conf /redis-etc/redis.conf
-  cp /redis-config/redis.conf /redis-etc/redis.conf
+  cp /redis/redis.conf /redis-config/redis.conf
   echo "It is dnc-redis-0; do not update the config file..."
 else
   # cp /redis-config/slave.conf /redis-etc/redis.conf
-  cp /redis-config/redis.conf /redis-etc/redis.conf
+  cp /redis/redis.conf /redis-config/redis.conf
   echo "It is not dnc-redis-0; need to update the conf file..."
-  echo >> /redis-etc/redis.conf
-  echo "replicaof $FQDN 6379" >> /redis-etc/redis.conf
+  echo >> /redis-config/redis.conf
+  echo "replicaof $FQDN 6379" >> /redis-config/redis.conf
 fi
