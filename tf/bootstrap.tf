@@ -35,7 +35,7 @@ locals {
 ###################################################################################################
 # redis                                                                                           #
 ###################################################################################################
-# /*** redis
+/*** redis
 module "dnc-redis" {
   source = "./modules/redis/redis-statefulset"
   app_name = var.app_name
@@ -75,6 +75,11 @@ module "dnc-redis" {
 }
 
 module "dnc-sentinel" {
+  # Redis has to be running when the Sentinel pods are being deployed; otherwise, the startup
+  # script will fail.
+  depends_on = [
+    module.dnc-redis
+  ]
   source = "./modules/redis/sentinel-statefulset"
   app_name = var.app_name
   app_version = var.app_version
@@ -98,18 +103,14 @@ module "dnc-sentinel" {
   pvc_access_modes = ["ReadWriteOnce"]
   pvc_storage_size = "1Gi"
   pvc_storage_class_name = "ibmc-block-silver"
+  redis_nodes = "dnc-redis-0.dnc-redis-headless,dnc-redis-1.dnc-redis-headless,dnscredis-2.dnc-redis-headless"
   env = {
-    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
-    # tools must be configured to use so called long node names.
-    # RABBITMQ_USE_LONGNAME = true
-    # Override the main RabbitMQ config file location.
-    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
   }
   service_port = 5000
   service_target_port = 5000
   service_name = local.svc_sentinel
 }
-# ***/  # redis - stateful
+***/  # redis - stateful
 
 ###################################################################################################
 # rabbitmq                                                                                        #
@@ -161,7 +162,7 @@ module "dnc-rabbitmq" {
 ###################################################################################################
 # Application                                                                                     #
 ###################################################################################################
-# /*** dnc-redis
+/*** dnc-redis
 module "dnc-redis-app" {
   depends_on = [
     module.dnc-redis
@@ -200,7 +201,7 @@ module "dnc-redis-app" {
   service_name = local.svc_redis_app
   service_type = "LoadBalancer"
 }
-# ***/ # dnc-redis
+***/ # dnc-redis
 
 /*** dnc-rmq
 module "dnc-rmq-publisher" {
@@ -274,7 +275,7 @@ module "dnc-rmq-subscriber" {
 }
 ***/ # dnc-rmq
 
-/***
+# /*** dnc-storage
 module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -291,7 +292,7 @@ module "dnc-storage" {
   env = {
     SVC_NAME: local.svc_dns_storage
     BUCKET_NAME: var.bucket_name
-    # Without HMAC.
+    # With IAM.
     AUTHENTICATION_TYPE: "iam"
     API_KEY: var.iam_storage_api_key
     SERVICE_INSTANCE_ID: var.iam_resource_instance_id
@@ -319,8 +320,9 @@ module "dnc-storage" {
   service_name = local.svc_storage
   service_type = "LoadBalancer"
 }
-***/
+# ***/ # dnc-storage
 
+/*** dnc-storage-cs
 module "dnc-storage-cs" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -365,6 +367,7 @@ module "dnc-storage-cs" {
   service_name = local.svc_storage_cs
   service_type = "LoadBalancer"
 }
+***/ # dot-net-core
 
 /***
 module "rmq-consumer-go" {

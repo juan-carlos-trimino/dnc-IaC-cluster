@@ -9,6 +9,7 @@ variable app_name {}
 variable app_version {}
 variable image_tag {}
 variable path_redis_files {}
+variable redis_nodes {}
 variable namespace {
   default = "default"
 }
@@ -196,7 +197,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/sentinel/sentinel-conf-setup.sh"
+            "/sentinel/sentinel-conf-setup.sh ${var.redis_nodes}"
           ]
           volume_mount {
             name = "sentinel-config"
