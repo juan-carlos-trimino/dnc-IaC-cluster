@@ -9,7 +9,7 @@ variable app_name {}
 variable app_version {}
 variable image_tag {}
 variable path_redis_files {}
-variable redis_nodes {}
+variable redis_password {}
 variable namespace {
   default = "default"
 }
@@ -106,6 +106,21 @@ locals {
   sentinel_label = "dnc-sentinel-cluster"
 }
 
+resource "kubernetes_secret" "secret" {
+  metadata {
+    name = "${var.service_name}-secret"
+    namespace = var.namespace
+    labels = {
+      app = var.app_name
+    }
+  }
+  # Plain-text data.
+  data = {
+    redis_password = var.redis_password
+  }
+  type = "Opaque"
+}
+
 # The ConfigMap passes to the rabbitmq daemon a bootstrap configuration which mainly defines peer
 # discovery and connectivity settings.
 resource "kubernetes_config_map" "config" {
@@ -118,6 +133,7 @@ resource "kubernetes_config_map" "config" {
   }
   data = {
     "sentinel-conf-setup.sh" = "${file("${var.path_redis_files}/sentinel-conf-setup.sh")}"
+    "sentinel.conf" = "${file("${var.path_redis_files}/redis.conf")}"
   }
 }
 
@@ -197,8 +213,24 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/sentinel/sentinel-conf-setup.sh ${var.redis_nodes}"
+            "/sentinel/sentinel-conf-setup.sh $(REDIS_PASSWORD) $(REDIS_NODES)"
           ]
+          dynamic "env" {
+            for_each = var.env
+            content {
+              name = env.key
+              value = env.value
+            }
+          }
+          env {
+            name = "REDIS_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.secret.metadata[0].name
+                key = "redis_password"
+              }
+            }
+          }
           volume_mount {
             name = "sentinel-config"
             mount_path = "/sentinel-config"
@@ -268,6 +300,10 @@ resource "kubernetes_stateful_set" "stateful_set" {
             # By default, the permissions on all files in a configMap volume are set to 644
             # (rw-r--r--).
             default_mode = "0770" # Octal
+            items {
+              key = "sentinel.conf"
+              path = "sentinel.conf" #File name.
+            }
             items {
               key = "sentinel-conf-setup.sh"
               path = "sentinel-conf-setup.sh" #File name.

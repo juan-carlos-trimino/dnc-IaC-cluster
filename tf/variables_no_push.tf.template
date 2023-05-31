@@ -132,3 +132,11 @@ variable rabbitmq_default_user {
   default = "<required>"
   sensitive = true
 }
+
+#######################
+# Redis (StatefulSet) #
+#######################
+variable redis_password {
+  default = "<required>"
+  sensitive = true
+}

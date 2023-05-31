@@ -14,6 +14,7 @@ variable app_name {}
 variable app_version {}
 variable image_tag {}
 variable path_redis_files {}
+variable redis_password {}
 variable namespace {
   default = "default"
 }
@@ -110,6 +111,21 @@ locals {
   redis_label = "dnc-redis-cluster"
 }
 
+resource "kubernetes_secret" "secret" {
+  metadata {
+    name = "${var.service_name}-secret"
+    namespace = var.namespace
+    labels = {
+      app = var.app_name
+    }
+  }
+  # Plain-text data.
+  data = {
+    redis_password = var.redis_password
+  }
+  type = "Opaque"
+}
+
 # The ConfigMap passes to the rabbitmq daemon a bootstrap configuration which mainly defines peer
 # discovery and connectivity settings.
 resource "kubernetes_config_map" "config" {
@@ -202,8 +218,17 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/bash", "-c"
           ]
           args = [
-            "/redis/redis-conf-setup.sh"
+            "/redis/redis-conf-setup.sh $(REDIS_PASSWORD)"
           ]
+          env {
+            name = "REDIS_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.secret.metadata[0].name
+                key = "redis_password"
+              }
+            }
+          }
           volume_mount {
             name = "redis-config"
             mount_path = "/redis-config"
@@ -219,10 +244,10 @@ resource "kubernetes_stateful_set" "stateful_set" {
           name = var.service_name
           image = var.image_tag
           image_pull_policy = var.image_pull_policy
-          # command = [
-          #   "redis-server",
-          #   "/redis-etc/redis.conf"
-          # ]
+          command = [
+            "redis-server",
+            "/redis-config/redis.conf"
+          ]
           # Specifying ports in the pod definition is purely informational. Omitting them has no
           # effect on whether clients can connect to the pod through the port or not. If the
           # container is accepting connections through a port bound to the 0.0.0.0 address, other

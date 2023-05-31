@@ -35,14 +35,14 @@ locals {
 ###################################################################################################
 # redis                                                                                           #
 ###################################################################################################
-/*** redis
+# /*** redis
 module "dnc-redis" {
   source = "./modules/redis/redis-statefulset"
   app_name = var.app_name
   app_version = var.app_version
-  # image_tag = "redis:7.0.11-alpine"
+  image_tag = "redis:7.0.11-alpine"
   # image_tag = "redis:7.0.11"
-  image_tag = "redis/redis-stack:edge"
+  # image_tag = "redis/redis-stack:edge"
   image_pull_policy = "IfNotPresent"
   namespace = local.namespace
   path_redis_files = "./modules/redis/util"
@@ -51,6 +51,7 @@ module "dnc-redis" {
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
   replicas = 3
+  redis_password = var.redis_password
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
   # value of '250m.'
@@ -93,6 +94,7 @@ module "dnc-sentinel" {
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
   replicas = 3
+  redis_password = var.redis_password
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
   # value of '250m.'
@@ -103,14 +105,14 @@ module "dnc-sentinel" {
   pvc_access_modes = ["ReadWriteOnce"]
   pvc_storage_size = "1Gi"
   pvc_storage_class_name = "ibmc-block-silver"
-  redis_nodes = "dnc-redis-0.dnc-redis-headless,dnc-redis-1.dnc-redis-headless,dnscredis-2.dnc-redis-headless"
   env = {
+    REDIS_NODES = "dnc-redis-0.dnc-redis-headless,dnc-redis-1.dnc-redis-headless,dnc-redis-2.dnc-redis-headless"
   }
   service_port = 5000
   service_target_port = 5000
   service_name = local.svc_sentinel
 }
-***/  # redis - stateful
+# ***/  # redis - stateful
 
 ###################################################################################################
 # rabbitmq                                                                                        #
@@ -275,7 +277,7 @@ module "dnc-rmq-subscriber" {
 }
 ***/ # dnc-rmq
 
-# /*** dnc-storage
+/*** dnc-storage
 module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -320,7 +322,7 @@ module "dnc-storage" {
   service_name = local.svc_storage
   service_type = "LoadBalancer"
 }
-# ***/ # dnc-storage
+***/ # dnc-storage
 
 /*** dnc-storage-cs
 module "dnc-storage-cs" {
