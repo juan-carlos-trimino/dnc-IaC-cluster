@@ -137,8 +137,8 @@ resource "kubernetes_config_map" "config" {
     }
   }
   data = {
-    "redis-conf-setup.sh" = "${file("${var.path_redis_files}/redis-conf-setup.sh")}"
-    "redis.conf" = "${file("${var.path_redis_files}/redis.conf")}"
+    "update-redis-master" = "${file("${var.path_redis_files}/update-redis-master.sh")}"
+    "redis-master" = "${file("${var.path_redis_files}/redis-master.conf")}"
   }
 }
 
@@ -215,10 +215,10 @@ resource "kubernetes_stateful_set" "stateful_set" {
           image_pull_policy = var.image_pull_policy
           # https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/#statefulset
           command = [
-            "/bin/bash", "-c"
+            "/bin/sh", "-c"
           ]
           args = [
-            "/redis/redis-conf-setup.sh $(REDIS_PASSWORD)"
+            "/redis/update-redis-master.sh $(REDIS_PASSWORD)"
           ]
           env {
             name = "REDIS_PASSWORD"
@@ -246,7 +246,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
           image_pull_policy = var.image_pull_policy
           command = [
             "redis-server",
-            "/redis-config/redis.conf"
+            "/redis-config/redis-master.conf"
           ]
           # Specifying ports in the pod definition is purely informational. Omitting them has no
           # effect on whether clients can connect to the pod through the port or not. If the
@@ -299,7 +299,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             # (rw-r--r--).
             default_mode = "0770" # Octal
             items {
-              key = "redis.conf"
+              key = "redis-master"
               path = "redis.conf" #File name.
             }
             items {

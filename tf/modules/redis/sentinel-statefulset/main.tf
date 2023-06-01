@@ -132,8 +132,8 @@ resource "kubernetes_config_map" "config" {
     }
   }
   data = {
-    "sentinel-conf-setup.sh" = "${file("${var.path_redis_files}/sentinel-conf-setup.sh")}"
-    "sentinel.conf" = "${file("${var.path_redis_files}/redis.conf")}"
+    "update-redis-sentinel" = "${file("${var.path_redis_files}/update-redis-sentinel.sh")}"
+    # "redis-sentinel" = "${file("${var.path_redis_files}/redis.conf")}"
   }
 }
 
@@ -213,7 +213,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/sentinel/sentinel-conf-setup.sh $(REDIS_PASSWORD) $(REDIS_NODES)"
+            "/sentinel/update-redis-sentinel.sh $(REDIS_PASSWORD) $(REDIS_NODES)"
           ]
           dynamic "env" {
             for_each = var.env
@@ -236,6 +236,11 @@ resource "kubernetes_stateful_set" "stateful_set" {
             mount_path = "/sentinel-config"
             read_only = false
           }
+          # volume_mount {
+          #   name = "config"
+          #   mount_path = "/sentinel"
+          #   read_only = true
+          # }
           volume_mount {
             name = "config"
             mount_path = "/sentinel"
@@ -300,13 +305,13 @@ resource "kubernetes_stateful_set" "stateful_set" {
             # By default, the permissions on all files in a configMap volume are set to 644
             # (rw-r--r--).
             default_mode = "0770" # Octal
+            # items {
+            #   key = "sentinel.conf"
+            #   path = "sentinel.conf" #File name.
+            # }
             items {
-              key = "sentinel.conf"
-              path = "sentinel.conf" #File name.
-            }
-            items {
-              key = "sentinel-conf-setup.sh"
-              path = "sentinel-conf-setup.sh" #File name.
+              key = "update-redis-sentinel"
+              path = "update-redis-sentinel.sh" #File name.
             }
           }
         }

@@ -106,7 +106,8 @@ module "dnc-sentinel" {
   pvc_storage_size = "1Gi"
   pvc_storage_class_name = "ibmc-block-silver"
   env = {
-    REDIS_NODES = "dnc-redis-0.dnc-redis-headless,dnc-redis-1.dnc-redis-headless,dnc-redis-2.dnc-redis-headless"
+    # REDIS_NODES = "dnc-redis-0.dnc-redis-headless.${local.namespace},dnc-redis-1.dnc-redis-headless.${local.namespace},dnc-redis-2.dnc-redis-headless.${local.namespace}"
+    REDIS_NODES = "dnc-redis-headless.${local.namespace}.svc.cluster.local,dnc-redis-headless.${local.namespace}.svc.cluster.local,dnc-redis-headless.${local.namespace}.svc.cluster.local"
   }
   service_port = 5000
   service_target_port = 5000
