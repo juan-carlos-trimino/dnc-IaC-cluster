@@ -1,4 +1,3 @@
-# https://lzone.de/cheat-sheet/Redis%20Sentinel
 /***
 -------------------------------------------------------
 A Terraform reusable module for deploying microservices

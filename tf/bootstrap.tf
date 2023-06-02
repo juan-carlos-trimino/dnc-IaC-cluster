@@ -88,7 +88,7 @@ module "dnc-sentinel" {
   # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
-  replicas = 3
+  replicas = 1
   redis_password = var.redis_password
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the

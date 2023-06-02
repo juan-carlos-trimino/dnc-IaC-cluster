@@ -218,8 +218,15 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/redis/update-redis-master.sh $(SENTINEL_NODES) $(REDIS_PASSWORD)"
+            "/redis/update-redis-master.sh $(REDIS_PASSWORD) $(SENTINEL_NODES)"
           ]
+          dynamic "env" {
+            for_each = var.env
+            content {
+              name = env.key
+              value = env.value
+            }
+          }
           env {
             name = "REDIS_PASSWORD"
             value_from {
