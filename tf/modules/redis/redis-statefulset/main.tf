@@ -137,8 +137,8 @@ resource "kubernetes_config_map" "config" {
     }
   }
   data = {
-    "update-redis-master" = "${file("${var.path_redis_files}/update-redis-master.sh")}"
-    "redis-master" = "${file("${var.path_redis_files}/redis-master.conf")}"
+    "update-redis-config" = "${file("${var.path_redis_files}/update-redis-config.sh")}"
+    "redis" = "${file("${var.path_redis_files}/redis.conf")}"
   }
 }
 
@@ -218,7 +218,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/redis/update-redis-master.sh $(REDIS_PASSWORD) $(SENTINEL_NODES)"
+            "/redis/update-redis-config.sh $(REDIS_PASSWORD) $(SENTINEL_NODES)"
           ]
           dynamic "env" {
             for_each = var.env
@@ -253,7 +253,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
           image_pull_policy = var.image_pull_policy
           command = [
             "redis-server",
-            "/redis-config/redis-master.conf"
+            "/redis-config/redis.conf"
           ]
           # Specifying ports in the pod definition is purely informational. Omitting them has no
           # effect on whether clients can connect to the pod through the port or not. If the
@@ -306,12 +306,12 @@ resource "kubernetes_stateful_set" "stateful_set" {
             # (rw-r--r--).
             default_mode = "0770" # Octal
             items {
-              key = "redis-master"
-              path = "redis-master.conf" #File name.
+              key = "redis"
+              path = "redis.conf" #File name.
             }
             items {
-              key = "update-redis-master"
-              path = "update-redis-master.sh" #File name.
+              key = "update-redis-config"
+              path = "update-redis-config.sh" #File name.
             }
           }
         }

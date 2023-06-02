@@ -131,11 +131,14 @@ resource "kubernetes_config_map" "config" {
     }
   }
   data = {
-    "update-redis-sentinel" = "${file("${var.path_redis_files}/update-redis-sentinel.sh")}"
-    # "redis-sentinel" = "${file("${var.path_redis_files}/redis.conf")}"
+    "update-sentinel-config" = "${file("${var.path_redis_files}/update-sentinel-config.sh")}"
+    # "sentinel-conf" = "${file("${var.path_redis_files}/sentinel.conf")}"
   }
 }
 
+# Redis Sentinel (https://redis.io/docs/management/sentinel/) provides high availability for Redis
+# when not using Redis Cluster (https://redis.io/docs/management/scaling/).
+#
 # There are other, equally important reasons for using a StatefulSet instead of a Deployment:
 # sticky identity, simple network identifiers, stable persistent storage and the ability to perform
 # ordered rolling upgrades.
@@ -212,7 +215,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/sentinel/update-redis-sentinel.sh $(REDIS_PASSWORD) $(REDIS_NODES)"
+            "/sentinel/update-sentinel-config.sh $(REDIS_NODES)"
           ]
           dynamic "env" {
             for_each = var.env
@@ -221,15 +224,15 @@ resource "kubernetes_stateful_set" "stateful_set" {
               value = env.value
             }
           }
-          env {
-            name = "REDIS_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.secret.metadata[0].name
-                key = "redis_password"
-              }
-            }
-          }
+          # env {
+          #   name = "REDIS_PASSWORD"
+          #   value_from {
+          #     secret_key_ref {
+          #       name = kubernetes_secret.secret.metadata[0].name
+          #       key = "redis_password"
+          #     }
+          #   }
+          # }
           volume_mount {
             name = "sentinel-config"
             mount_path = "/sentinel-config"
@@ -305,12 +308,12 @@ resource "kubernetes_stateful_set" "stateful_set" {
             # (rw-r--r--).
             default_mode = "0770" # Octal
             # items {
-            #   key = "sentinel.conf"
+            #   key = "sentinel-conf"
             #   path = "sentinel.conf" #File name.
             # }
             items {
-              key = "update-redis-sentinel"
-              path = "update-redis-sentinel.sh" #File name.
+              key = "update-sentinel-config"
+              path = "update-sentinel-config.sh" #File name.
             }
           }
         }

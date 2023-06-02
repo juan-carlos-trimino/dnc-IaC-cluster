@@ -63,7 +63,7 @@ module "dnc-redis" {
   pvc_storage_size = "5Gi"
   pvc_storage_class_name = "ibmc-block-silver"
   env = {
-    SENTINEL_NODES = "dnc-sentinel-0.dnc-sentinel-headless.${local.namespace},dnc-sentinel-1.dnc-sentinel-headless.${local.namespace},dnc-sentinel-2.dnc-sentinel-headless.${local.namespace}"
+    SENTINEL_NODES = "dnc-sentinel-0.dnc-sentinel-headless,dnc-sentinel-1.dnc-sentinel-headless,dnc-sentinel-2.dnc-sentinel-headless"
   }
   service_port = 6379
   service_target_port = 6379
@@ -88,7 +88,7 @@ module "dnc-sentinel" {
   # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
-  replicas = 1
+  replicas = 3
   redis_password = var.redis_password
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
@@ -103,8 +103,8 @@ module "dnc-sentinel" {
   env = {
     REDIS_NODES = "dnc-redis-0.dnc-redis-headless.${local.namespace},dnc-redis-1.dnc-redis-headless.${local.namespace},dnc-redis-2.dnc-redis-headless.${local.namespace}"
   }
-  service_port = 5000
-  service_target_port = 5000
+  service_port = 26379
+  service_target_port = 26379
   service_name = local.svc_sentinel
 }
 # ***/  # redis - stateful
