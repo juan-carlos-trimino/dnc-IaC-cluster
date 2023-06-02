@@ -63,16 +63,11 @@ module "dnc-redis" {
   pvc_storage_size = "5Gi"
   pvc_storage_class_name = "ibmc-block-silver"
   env = {
-    # If a system uses fully qualified domain names (FQDNs) for hostnames, RabbitMQ nodes and CLI
-    # tools must be configured to use so called long node names.
-    # RABBITMQ_USE_LONGNAME = true
-    # Override the main RabbitMQ config file location.
-    # RABBITMQ_CONFIG_FILE = "/config/rabbitmq"
+    SENTINEL_NODES = "dnc-sentinel-0.dnc-sentinel-headless.${local.namespace},dnc-sentinel-1.dnc-sentinel-headless.${local.namespace},dnc-sentinel-2.dnc-sentinel-headless.${local.namespace}"
   }
   service_port = 6379
   service_target_port = 6379
   service_name = local.svc_redis
-  # service_type = "LoadBalancer"
 }
 
 module "dnc-sentinel" {
@@ -106,8 +101,7 @@ module "dnc-sentinel" {
   pvc_storage_size = "1Gi"
   pvc_storage_class_name = "ibmc-block-silver"
   env = {
-    # REDIS_NODES = "dnc-redis-0.dnc-redis-headless.${local.namespace},dnc-redis-1.dnc-redis-headless.${local.namespace},dnc-redis-2.dnc-redis-headless.${local.namespace}"
-    REDIS_NODES = "dnc-redis-headless.${local.namespace}.svc.cluster.local,dnc-redis-headless.${local.namespace}.svc.cluster.local,dnc-redis-headless.${local.namespace}.svc.cluster.local"
+    REDIS_NODES = "dnc-redis-0.dnc-redis-headless.${local.namespace},dnc-redis-1.dnc-redis-headless.${local.namespace},dnc-redis-2.dnc-redis-headless.${local.namespace}"
   }
   service_port = 5000
   service_target_port = 5000

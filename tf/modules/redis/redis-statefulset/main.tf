@@ -218,7 +218,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
             "/bin/sh", "-c"
           ]
           args = [
-            "/redis/update-redis-master.sh $(REDIS_PASSWORD)"
+            "/redis/update-redis-master.sh $(SENTINEL_NODES) $(REDIS_PASSWORD)"
           ]
           env {
             name = "REDIS_PASSWORD"
@@ -300,11 +300,11 @@ resource "kubernetes_stateful_set" "stateful_set" {
             default_mode = "0770" # Octal
             items {
               key = "redis-master"
-              path = "redis.conf" #File name.
+              path = "redis-master.conf" #File name.
             }
             items {
-              key = "redis-conf-setup.sh"
-              path = "redis-conf-setup.sh" #File name.
+              key = "update-redis-master"
+              path = "update-redis-master.sh" #File name.
             }
           }
         }

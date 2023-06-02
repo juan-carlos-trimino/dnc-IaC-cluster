@@ -45,5 +45,6 @@ tf/modules/redis/sentinel-statefulset/*
 !tf/modules/redis/sentinel-statefulset/main.tf
 !tf/modules/redis/util/
 tf/modules/redis/util/*
-!tf/modules/redis/util/redis.conf
-!tf/modules/redis/util/redis-conf-setup.sh
+!tf/modules/redis/util/redis-master.conf
+!tf/modules/redis/util/update-redis-sentinel.sh
+!tf/modules/redis/util/update-redis-master.sh
