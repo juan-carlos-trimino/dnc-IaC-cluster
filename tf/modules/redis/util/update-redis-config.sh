@@ -11,49 +11,44 @@ set +vx
 # Copy the original config file so that it is unmodified for reuse; the copy will be modified as
 # needed.
 # The redis-master.conf file is used by Redis.
-cp /redis/redis-master.conf /redis-config/redis-master.conf
-# $1 - password
-# $2 - sentinel nodes
-echo >> /redis-config/redis-master.conf
-echo "requirepass $1" >> /redis-config/redis-master.conf
-echo "masterauth $1" >> /redis-config/redis-master.conf
-CURRENT_FQDN_HOSTNAME=`hostname -f`
+cp /redis/redis.conf /redis-config/redis.conf
+# $1 - sentinel nodes
 echo "Finding master..."
+CURRENT_FQDN_HOSTNAME=`hostname -f`
 echo "Current hostname: ${CURRENT_FQDN_HOSTNAME}"
 # https://linux.die.net/man/1/hostname
 FQDN=`hostname -f | sed -e 's:dnc-redis-[0-9]\.:dnc-redis-0.:'`
 echo "FQDN: $FQDN"
-echo "Nodes: $2"
-#
-for node in $(echo $2 | sed -e "s:,: :g")
+echo "Nodes: $1"
+for node in $(echo $1 | sed -e "s:,: :g")
 do
   echo "Sentinel: $node"
   # https://www.mankier.com/1/redis-cli
-  if [ "$(timeout 5 redis-cli -h $node -p 5000 ping)" == "PONG" ]; then
+  if [ "$(redis-cli -h $node -p 26379 ping)" == "PONG" ]; then
     echo "Sentinel found, finding master..."
-    MASTER="$(redis-cli -h $node -p 5000 sentinel get-master-addr-by-name mymaster | \
-           grep -E '(^dnc-redis-*)|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})')"
+    MASTER_IP="$(redis-cli -h $node -p 26379 sentinel get-master-addr-by-name mymaster | \
+                 grep -E '(^dnc-redis-*)|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})')"
     HOSTNAME_IP=$(hostname -i)
+    echo "Hostname: $HOSTNAME"
     echo "Hostname IP: $HOSTNAME_IP"
-    echo "Master: $MASTER"
-    echo "${HOSTNAME}.dnc-redis-headless.dot-net-core"
-    # if [ "${HOSTNAME}.dnc-redis-headless.dot-net-core" == ${MASTER} ]; then
-    if [ ${HOSTNAME_IP} == ${MASTER} ]; then
-      echo "This is master..."
+    echo "Master IP: $MASTER_IP"
+    if [ ${HOSTNAME_IP} == ${MASTER_IP} ]; then
+      echo "$HOSTNAME is the master..."
     else
-      echo "Master found: $MASTER, updating redis-master.conf"
-      echo >> /redis-config/redis-master.conf
-      echo "replicaof $MASTER 6379" >> /redis-config/redis-master.conf
+      echo "Master found: $MASTER_IP, updating redis-master.conf"
+      echo >> /redis-config/redis.conf
+      echo "replicaof $MASTER_IP 6379" >> /redis-config/redis.conf
     fi
     exit 0
   fi
 done
 echo "Sentinel not found..."
+echo "Master not found..."
 if [ ${HOSTNAME} == "dnc-redis-0" ]; then
   echo "$HOSTNAME is the master..."
 else
   # Ensure the key "replicaof" in the config file is commented out; it needs to be set dynamically!!!
   echo "$HOSTNAME is not the master; updating the config file..."
-  echo >> /redis-config/redis-master.conf
-  echo "replicaof $FQDN 6379" >> /redis-config/redis-master.conf
+  echo >> /redis-config/redis.conf
+  echo "replicaof $FQDN 6379" >> /redis-config/redis.conf
 fi

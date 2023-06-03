@@ -51,7 +51,6 @@ module "dnc-redis" {
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
   replicas = 3
-  redis_password = var.redis_password
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
   # value of '250m.'
@@ -80,7 +79,6 @@ module "dnc-sentinel" {
   app_name = var.app_name
   app_version = var.app_version
   image_tag = "redis:7.0.11-alpine"
-  # image_tag = "redis:7.0.11"
   image_pull_policy = "IfNotPresent"
   namespace = local.namespace
   path_redis_files = "./modules/redis/util"
@@ -89,7 +87,6 @@ module "dnc-sentinel" {
   # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
   # and so on.
   replicas = 3
-  redis_password = var.redis_password
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
   # value of '250m.'
@@ -97,11 +94,8 @@ module "dnc-sentinel" {
   qos_limits_cpu = "200m"
   qos_requests_memory = "300Mi"
   qos_limits_memory = "400Mi"
-  pvc_access_modes = ["ReadWriteOnce"]
-  pvc_storage_size = "1Gi"
-  pvc_storage_class_name = "ibmc-block-silver"
   env = {
-    REDIS_NODES = "dnc-redis-0.dnc-redis-headless.${local.namespace},dnc-redis-1.dnc-redis-headless.${local.namespace},dnc-redis-2.dnc-redis-headless.${local.namespace}"
+    REDIS_NODES = "dnc-redis-0.dnc-redis-headless,dnc-redis-1.dnc-redis-headless,dnc-redis-2.dnc-redis-headless"
   }
   service_port = 26379
   service_target_port = 26379

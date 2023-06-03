@@ -1,9 +1,3 @@
-# https://redis.io/docs/management/sentinel/
-# https://redis.io/docs/management/scaling/
-# https://redis.io/
-# https://redis.io/docs/management/persistence/
-# https://www.baeldung.com/redis-sentinel-vs-clustering
-# https://www.youtube.com/watch?v=JmCn7k0PlV4
 /***
 -------------------------------------------------------
 A Terraform reusable module for deploying microservices
@@ -14,7 +8,6 @@ variable app_name {}
 variable app_version {}
 variable image_tag {}
 variable path_redis_files {}
-variable redis_password {}
 variable namespace {
   default = "default"
 }
@@ -111,21 +104,6 @@ locals {
   redis_label = "dnc-redis-cluster"
 }
 
-resource "kubernetes_secret" "secret" {
-  metadata {
-    name = "${var.service_name}-secret"
-    namespace = var.namespace
-    labels = {
-      app = var.app_name
-    }
-  }
-  # Plain-text data.
-  data = {
-    redis_password = var.redis_password
-  }
-  type = "Opaque"
-}
-
 # The ConfigMap passes to the rabbitmq daemon a bootstrap configuration which mainly defines peer
 # discovery and connectivity settings.
 resource "kubernetes_config_map" "config" {
@@ -211,29 +189,18 @@ resource "kubernetes_stateful_set" "stateful_set" {
         init_container {
           name = "init-redis"
           image = var.image_tag
-          # image = "busybox:1.34.1"
           image_pull_policy = var.image_pull_policy
-          # https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/#statefulset
           command = [
             "/bin/sh", "-c"
           ]
           args = [
-            "/redis/update-redis-config.sh $(REDIS_PASSWORD) $(SENTINEL_NODES)"
+            "/redis/update-redis-config.sh $(SENTINEL_NODES)"
           ]
           dynamic "env" {
             for_each = var.env
             content {
               name = env.key
               value = env.value
-            }
-          }
-          env {
-            name = "REDIS_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.secret.metadata[0].name
-                key = "redis_password"
-              }
             }
           }
           volume_mount {

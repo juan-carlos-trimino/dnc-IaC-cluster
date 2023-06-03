@@ -8,7 +8,6 @@ variable app_name {}
 variable app_version {}
 variable image_tag {}
 variable path_redis_files {}
-variable redis_password {}
 variable namespace {
   default = "default"
 }
@@ -58,16 +57,6 @@ variable publish_not_ready_addresses {
   default = "false"
   type = bool
 }
-variable pvc_access_modes {
-  default = []
-  type = list(any)
-}
-variable pvc_storage_class_name {
-  default = ""
-}
-variable pvc_storage_size {
-  default = "20Gi"
-}
 variable service_name {
   default = ""
 }
@@ -103,21 +92,6 @@ locals {
   pod_selector_label = "ps-${var.service_name}"
   svc_selector_label = "svc-${local.svc_name}"
   sentinel_label = "dnc-sentinel-cluster"
-}
-
-resource "kubernetes_secret" "secret" {
-  metadata {
-    name = "${var.service_name}-secret"
-    namespace = var.namespace
-    labels = {
-      app = var.app_name
-    }
-  }
-  # Plain-text data.
-  data = {
-    redis_password = var.redis_password
-  }
-  type = "Opaque"
 }
 
 # The ConfigMap passes to the rabbitmq daemon a bootstrap configuration which mainly defines peer
@@ -208,9 +182,7 @@ resource "kubernetes_stateful_set" "stateful_set" {
         init_container {
           name = "init-sentinel"
           image = var.image_tag
-          # image = "busybox:1.34.1"
           image_pull_policy = var.image_pull_policy
-          # https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/#statefulset
           command = [
             "/bin/sh", "-c"
           ]
@@ -224,25 +196,11 @@ resource "kubernetes_stateful_set" "stateful_set" {
               value = env.value
             }
           }
-          # env {
-          #   name = "REDIS_PASSWORD"
-          #   value_from {
-          #     secret_key_ref {
-          #       name = kubernetes_secret.secret.metadata[0].name
-          #       key = "redis_password"
-          #     }
-          #   }
-          # }
           volume_mount {
             name = "sentinel-config"
             mount_path = "/sentinel-config"
             read_only = false
           }
-          # volume_mount {
-          #   name = "config"
-          #   mount_path = "/sentinel"
-          #   read_only = true
-          # }
           volume_mount {
             name = "config"
             mount_path = "/sentinel"
@@ -320,36 +278,6 @@ resource "kubernetes_stateful_set" "stateful_set" {
         volume {
           name = "sentinel-config"
           empty_dir {
-          }
-        }
-      }
-    }
-    # This template will be used to create a PersistentVolumeClaim for each pod.
-    # Since PersistentVolumes are cluster-level resources, they do not belong to any namespace, but
-    # PersistentVolumeClaims can only be created in a specific namespace; they can only be used by
-    # pods in the same namespace.
-    #
-    # In order for RabbitMQ nodes to retain data between Pod restarts, node's data directory must
-    # use durable storage. A Persistent Volume must be attached to each RabbitMQ Pod.
-    #
-    # If a transient volume is used to back a RabbitMQ node, the node will lose its identity and
-    # all of its local data in case of a restart. This includes both schema and durable queue data.
-    # Syncing all of this data on every node restart would be highly inefficient. In case of a loss
-    # of quorum during a rolling restart, this will also lead to data loss.
-    volume_claim_template {
-      metadata {
-        name = "sentinel-data"
-        namespace = var.namespace
-        labels = {
-          app = var.app_name
-        }
-      }
-      spec {
-        access_modes = var.pvc_access_modes
-        storage_class_name = var.pvc_storage_class_name
-        resources {
-          requests = {
-            storage = var.pvc_storage_size
           }
         }
       }

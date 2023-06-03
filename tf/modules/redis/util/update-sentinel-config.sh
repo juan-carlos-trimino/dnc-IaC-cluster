@@ -16,10 +16,10 @@ do
   echo "***---***"
   echo "$(redis-cli --no-auth-warning --raw -h $node info replication)"
   echo "***---***"
-  # Obtain information about the node | Skip the 1st line and print 1st column of every subsequent
-  # line | Return the line with role:xxxx | Return the second field separate by ":"; e.g.,
+  # Obtain information about the node | Print 1st column of every line |
+  # Return the line with role:xxxx | Return the second field separate by ":"; e.g.,
   # role:slave will return slave
-  ROLE=$(redis-cli --no-auth-warning --raw -h $node -a $REDIS_PASSWORD info replication | \
+  ROLE=$(redis-cli --no-auth-warning --raw -h $node info replication | \
          awk '{print $1}' | grep role: | cut -d ":" -f2)
   MASTER=$node
   echo "Node: $node"
@@ -33,8 +33,6 @@ do
     echo ""
   fi
 done
-# FQDN_HOSTNAME=`hostname -f`
-
 # Older versions of Sentinel did not support host names and required IP addresses to be specified
 # everywhere. Starting with version 6.2, Sentinel has optional support for host names. This
 # capability is disabled by default. To enable this capability, add "sentinel resolve-hostnames yes"
