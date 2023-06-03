@@ -113,9 +113,10 @@ resource "kubernetes_config_map" "config" {
 # Redis Sentinel (https://redis.io/docs/management/sentinel/) provides high availability for Redis
 # when not using Redis Cluster (https://redis.io/docs/management/scaling/).
 #
-# There are other, equally important reasons for using a StatefulSet instead of a Deployment:
-# sticky identity, simple network identifiers, stable persistent storage and the ability to perform
-# ordered rolling upgrades.
+# Unlike pods created by ReplicaSets, pods created by the StatefulSet aren't exact replicas of each
+# other. Each can have its own set of volumes (persistent state), which differentiates it from its
+# peers. Furthermore, these pods have a stable identity (a requirement for the Sentinel pods)
+# instead of each new pod getting a completely random one.
 #
 # $ kubectl get sts -n dot-net-core
 resource "kubernetes_stateful_set" "stateful_set" {
@@ -273,6 +274,11 @@ resource "kubernetes_stateful_set" "stateful_set" {
               key = "update-sentinel-config"
               path = "update-sentinel-config.sh" #File name.
             }
+          }
+        }
+        volume {
+          name = "sentinel-data"
+          empty_dir {
           }
         }
         volume {
