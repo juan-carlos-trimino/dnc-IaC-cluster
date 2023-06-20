@@ -41,8 +41,6 @@ module "dnc-redis" {
   app_name = var.app_name
   app_version = var.app_version
   image_tag = "redis:7.0.11-alpine"
-  # image_tag = "redis:7.0.11"
-  # image_tag = "redis/redis-stack:edge"
   image_pull_policy = "IfNotPresent"
   namespace = local.namespace
   path_redis_files = "./modules/redis/util"
@@ -83,9 +81,8 @@ module "dnc-sentinel" {
   namespace = local.namespace
   path_redis_files = "./modules/redis/util"
   publish_not_ready_addresses = true
-  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
-  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
-  # and so on.
+  # Because several features require a consensus among cluster members, odd numbers of cluster
+  # nodes are highly recommended: 1, 3, 5, 7 and so on.
   replicas = 3
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
@@ -106,7 +103,7 @@ module "dnc-sentinel" {
 ###################################################################################################
 # rabbitmq                                                                                        #
 ###################################################################################################
-/*** rabbitmq
+# /*** rabbitmq
 module "dnc-rabbitmq" {
   source = "./modules/rabbitmq-statefulset"
   app_name = var.app_name
@@ -122,9 +119,8 @@ module "dnc-rabbitmq" {
   rabbitmq_default_pass = var.rabbitmq_default_pass
   rabbitmq_default_user = var.rabbitmq_default_user
   publish_not_ready_addresses = true
-  # Because several features (e.g. quorum queues, client tracking in MQTT) require a consensus
-  # between cluster members, odd numbers of cluster nodes are highly recommended: 1, 3, 5, 7
-  # and so on.
+  # Because several features require a consensus among cluster members, odd numbers of cluster
+  # nodes are highly recommended: 1, 3, 5, 7 and so on.
   replicas = 3
   # Limits and requests for CPU resources are measured in millicores. If the container needs one
   # full core to run, use the value '1000m.' If the container only needs 1/4 of a core, use the
@@ -148,7 +144,7 @@ module "dnc-rabbitmq" {
   mgmt_service_target_port = 15672
   service_name = local.svc_rabbitmq
 }
-***/  # rabbitmq - statefulset
+# ***/  # rabbitmq - statefulset
 
 ###################################################################################################
 # Application                                                                                     #
@@ -194,7 +190,7 @@ module "dnc-redis-app" {
 }
 ***/ # dnc-redis
 
-/*** dnc-rmq
+# /*** dnc-rmq
 module "dnc-rmq-publisher" {
   depends_on = [
     module.dnc-rabbitmq
@@ -264,9 +260,9 @@ module "dnc-rmq-subscriber" {
   # }]
   service_name = local.svc_rmq_subscriber
 }
-***/ # dnc-rmq
+# ***/ # dnc-rmq
 
-/*** dnc-storage
+# /*** dnc-storage
 module "dnc-storage" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -274,7 +270,7 @@ module "dnc-storage" {
   app_name = var.app_name
   app_version = var.app_version
   namespace = local.namespace
-  replicas = 1
+  replicas = 2
   qos_limits_cpu = "400m"
   qos_limits_memory = "400Mi"
   cr_login_server = local.cr_login_server
@@ -311,9 +307,9 @@ module "dnc-storage" {
   service_name = local.svc_storage
   service_type = "LoadBalancer"
 }
-***/ # dnc-storage
+# ***/ # dnc-storage
 
-/*** dnc-storage-cs
+# /*** dnc-storage-cs
 module "dnc-storage-cs" {
   # Specify the location of the module, which contains the file main.tf.
   source = "./modules/deployment"
@@ -358,7 +354,7 @@ module "dnc-storage-cs" {
   service_name = local.svc_storage_cs
   service_type = "LoadBalancer"
 }
-***/ # dot-net-core
+# ***/ # dot-net-core
 
 /***
 module "rmq-consumer-go" {
